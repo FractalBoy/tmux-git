@@ -9,6 +9,7 @@ fi
 
 git_commit_sha=$(curl -H "$AUTH_HEADER" -s https://api.github.com/repos/tmux/tmux/commits/master | jq -r .sha | cut -c1-8)
 tmux_version=$(curl -s https://raw.githubusercontent.com/tmux/tmux/master/configure.ac | awk -F'next-' '/AC_INIT/ { print $2 }' | sed 's/)//')
+date=$(date +'%a %b %d %Y')
 
 cat > tmux.spec <<EOF
 Name:           tmux
@@ -58,6 +59,6 @@ sh ./autogen.sh
 %{_mandir}/man1/tmux.1*
 
 %changelog
-* Mon Dec 22 2025 Marc Reisner <reisner.marc@gmail.com> - ${tmux_version}-1.git${git_commit_sha}
+* ${date} Marc Reisner <reisner.marc@gmail.com> - ${tmux_version}-1.git${git_commit_sha}
 - Git snapshot build
 EOF
