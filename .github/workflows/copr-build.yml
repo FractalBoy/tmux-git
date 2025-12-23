@@ -73,10 +73,8 @@ jobs:
           chmod 600 ~/.config/copr
       
       - name: Submit to Copr
-        env:
-          COPR_PROJECT: ${{ secrets.COPR_PROJECT }}
         run: |
-          copr-cli build "$COPR_PROJECT" ${{ steps.srpm.outputs.path }}
+          copr-cli build tmux-git ${{ steps.srpm.outputs.path }}
       
       - name: Notify on failure
         if: failure()
