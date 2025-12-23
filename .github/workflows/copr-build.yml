@@ -31,6 +31,8 @@ jobs:
           echo '%_topdir %(echo $HOME)/rpmbuild' > ~/.rpmmacros
       
       - name: Generate spec file
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x generate-spec.sh
           ./generate-spec.sh

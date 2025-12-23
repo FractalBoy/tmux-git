@@ -1,6 +1,13 @@
 #!/bin/sh
 
-git_commit_sha=$(curl -s https://api.github.com/repos/tmux/tmux/commits/master | jq -r .sha | cut -c1-8)
+# Use GITHUB_TOKEN if available for authentication
+if [ -n "$GITHUB_TOKEN" ]; then
+    AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
+else
+    AUTH_HEADER=""
+fi
+
+git_commit_sha=$(curl -H "$AUTH_HEADER" -s https://api.github.com/repos/tmux/tmux/commits/master | jq -r .sha | cut -c1-8)
 tmux_version=$(curl -s https://raw.githubusercontent.com/tmux/tmux/master/configure.ac | awk -F'next-' '/AC_INIT/ { print $2 }' | sed 's/)//')
 
 cat > tmux.spec <<EOF
