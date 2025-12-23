@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm rpmbuild wget jq curl
+          sudo apt-get install -y rpm wget jq curl
       
       - name: Setup RPM build tree
         run: |
