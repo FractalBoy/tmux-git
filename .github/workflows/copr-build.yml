@@ -1,0 +1,84 @@
+name: Build and Push to Copr
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual triggers
+  push:
+    branches:
+      - main
+    paths:
+      - 'generate-spec.sh'
+      - '.github/workflows/copr-build.yml'
+
+jobs:
+  build-srpm:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm rpmbuild wget jq curl
+      
+      - name: Setup RPM build tree
+        run: |
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          echo '%_topdir %(echo $HOME)/rpmbuild' > ~/.rpmmacros
+      
+      - name: Generate spec file
+        run: |
+          chmod +x generate-spec.sh
+          ./generate-spec.sh
+          cp tmux.spec ~/rpmbuild/SPECS/
+      
+      - name: Download source
+        run: |
+          wget https://github.com/tmux/tmux/archive/refs/heads/master.zip \
+               -O ~/rpmbuild/SOURCES/master.zip
+      
+      - name: Build SRPM
+        run: |
+          rpmbuild -bs ~/rpmbuild/SPECS/tmux.spec
+      
+      - name: Get SRPM filename
+        id: srpm
+        run: |
+          SRPM_FILE=$(ls ~/rpmbuild/SRPMS/tmux-*.src.rpm)
+          echo "path=$SRPM_FILE" >> $GITHUB_OUTPUT
+          echo "name=$(basename $SRPM_FILE)" >> $GITHUB_OUTPUT
+      
+      - name: Upload SRPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tmux-srpm
+          path: ${{ steps.srpm.outputs.path }}
+          retention-days: 7
+      
+      - name: Install Copr CLI
+        run: |
+          sudo apt-get install -y python3-pip
+          pip3 install copr-cli
+      
+      - name: Configure Copr
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+        run: |
+          mkdir -p ~/.config
+          echo "$COPR_CONFIG" > ~/.config/copr
+          chmod 600 ~/.config/copr
+      
+      - name: Submit to Copr
+        env:
+          COPR_PROJECT: ${{ secrets.COPR_PROJECT }}
+        run: |
+          copr-cli build "$COPR_PROJECT" ${{ steps.srpm.outputs.path }}
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Build failed! Check the Actions log for details."
